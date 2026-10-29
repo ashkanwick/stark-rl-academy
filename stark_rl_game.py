@@ -251,6 +251,18 @@ _INNER_TEMPLATE = r'''<style>
   font-family:Consolas,Monaco,monospace;direction:ltr;text-align:left}
 .s0{color:#ff8a8a}.s1{color:#7cc9ff}.s2{color:#ffd76b}
 
+/* ---- teach panel (professor mode) ---- */
+.sa-teach{background:var(--panel);border:1px solid rgba(255,200,61,.35);border-radius:12px;
+  padding:10px 14px;margin-top:10px;text-align:right}
+.sa-teach.hidden{display:none}
+.sa-teachhead{font-size:12px;letter-spacing:.08em;color:var(--gold);margin-bottom:6px}
+.sa-tline{font-size:12.5px;line-height:2;padding:3px 0;border-bottom:1px dashed rgba(34,48,65,.6)}
+.sa-tline:last-child{border-bottom:none}
+.sa-tlab{display:inline-block;min-width:96px;color:var(--cyan);font-size:11px;letter-spacing:.04em}
+.sa-tline b{color:var(--gold)}
+.sa-tline .good{color:var(--green)} .sa-tline .bad{color:var(--red)}
+.sa-btn.teach-on{color:var(--gold);border-color:rgba(255,200,61,.5)}
+
 /* ---- modal ---- */
 #sa-modal{position:absolute;inset:0;background:rgba(4,6,10,.87);display:flex;align-items:center;
   justify-content:center;z-index:60;border-radius:14px}
@@ -417,6 +429,13 @@ _INNER_TEMPLATE = r'''<style>
         <button class="sa-btn sa-big" id="m1-btn1" type="button">✋ HOLD <span class="kbd">↓</span></button>
         <button class="sa-btn sa-big" id="m1-btn2" type="button">◀ PUSH LEFT <span class="kbd">←</span></button>
       </div>
+      <div class="sa-ctrlgrp">
+        <button class="sa-btn" id="m1-teach-toggle" type="button">🧑‍🏫 توضیح RL</button>
+      </div>
+    </div>
+    <div id="m1-teach" class="sa-teach" aria-live="polite">
+      <div class="sa-teachhead">🧑‍🏫 J.A.R.V.I.S ACADEMY — «چرا؟» هر اتفاق</div>
+      <div id="m1-teach-lines"></div>
     </div>
     <div class="sa-hint" dir="rtl">WATCH: هر حرکت مستقیم از argmax جدول Q می‌آید. &nbsp;YOU FLY: با دکمه‌ها یا کلیدهای جهت‌دار زره را روی 🎯 نگه دار و با امتیاز جارویس (<span class="num" id="m1-airef">—</span>) مقایسه کن!</div>
   </div>
@@ -443,7 +462,12 @@ _INNER_TEMPLATE = r'''<style>
       <button class="sa-btn" id="m2-step" type="button">⏭ STEP</button>
       <button class="sa-btn" id="m2-speed" type="button">1×</button>
       <button class="sa-btn" id="m2-restart" type="button">🔁 RESTART</button>
+      <button class="sa-btn" id="m2-teach-toggle" type="button">🧑‍🏫 توضیح RL</button>
     </div></div>
+    <div id="m2-teach" class="sa-teach" aria-live="polite">
+      <div class="sa-teachhead">🧑‍🏫 ACADEMY — هماهنگیِ بدون رئیس، قدم‌به‌قدم</div>
+      <div id="m2-teach-lines"></div>
+    </div>
     <div class="sa-hint" dir="rtl">هر زره فقط جدول Q خودش را دارد (وضعیتش + رادار هم‌تیمی‌ها) — هماهنگی صرفاً از پاداش تیمی بیرون آمده است.</div>
   </div>
 
@@ -513,6 +537,29 @@ function showModal(title, lines, btns) {
 }
 const hideModal = () => { $('sa-modal').hidden = true; };
 
+/* ================= TEACH MODE (professor panel) ================= */
+const TEACH = { on: localStorage.getItem('starkTeach') !== '0' };
+function teachSet(on) {
+  TEACH.on = on;
+  try { localStorage.setItem('starkTeach', on ? '1' : '0'); } catch (e) {}
+  $('m1-teach').classList.toggle('hidden', !on);
+  $('m2-teach').classList.toggle('hidden', !on);
+  for (const id of ['m1-teach-toggle', 'm2-teach-toggle']) {
+    $(id).textContent = '🧑‍🏫 توضیح RL: ' + (on ? 'روشن' : 'خاموش');
+    $(id).classList.toggle('teach-on', on);
+  }
+}
+function teachLine(box, html) {
+  const el = $(box);
+  el.insertAdjacentHTML('afterbegin', '<div class="sa-tline">' + html + '</div>');
+  while (el.children.length > 6) el.removeChild(el.lastChild);
+}
+function teachReward(r) {
+  if (r === 20)  return '<span class="good">+20</span> 🎯 تعادل — بزرگ‌ترین جایزه‌ی محیط: «همین‌جا بمان»';
+  if (r === -100) return '<span class="bad">-100</span> 💥 مجازات سقوط — همین عدد در جدول ثبت می‌شود و این مسیر را بی‌ارزش می‌کند';
+  return '<span class="bad">-2</span> ⛽ هزینه‌ی سوخت/زمان — فشارِ ملایم برای رسیدنِ سریع‌تر به مرکز';
+}
+
 /* =================  MISSION 1  ================= */
 const M1 = { mode: 'watch', idx: 0, total: 0, paused: true, speed: 1, timer: null,
              mTilt: -3, mScore: 0, mSteps: 0, mStreak: 0, mBest: 0, mBusy: false };
@@ -563,15 +610,32 @@ function eduComment(f) {
     ? `شیب به ${needed} افتاده → رانشگر سمت ${needed} شلیک می‌کند 🔥 تا زره به سمت 🎯 هل بخورد (argmaxِ همان ردیف).`
     : `رانشگر سمت ${right ? 'چپ' : 'راست'} — اصلاحِ ریز برای برگشت به 🎯.`;
 }
+function m1TeachWatch(f) {
+  if (!TEACH.on) return;
+  const t = f.tilt, a = f.action;
+  let why;
+  if (t === 0) why = 'در این ردیف همه‌ی گزینه‌ها هم‌ارزش‌اند (≈' + f.q[0].toFixed(0) + ') — لرزشِ میکروی طبیعی حول 🎯 همین است';
+  else if ((t < 0 && a === 0) || (t > 0 && a === 2)) why = 'حاصل ۸۰۰ اپیزود آزمون‌وخطا: در این وضعیت، این اکشن بیشترین پاداشِ بلندمدت را داد — سیاست = argmax(Q)';
+  else why = 'انتظارِ باد 🌪 — گاهی صبر کردن ارزان‌تر از سوختِ حرکت است (Q باد را دیده است)';
+  teachLine('m1-teach-lines',
+    '<span class="sa-tlab">وضعیت (State)</span> شیب <b dir="ltr">' + (t * 15 > 0 ? '+' : '') + (t * 15) + '°</b>'
+    + (t === 0 ? ' — روی هدف 🎯' : ' — فاصله تا مرکز: <b dir="ltr">' + Math.abs(t) + '</b> گام') + '<br>'
+    + '<span class="sa-tlab">تصمیم (Policy)</span> ' + D.p1.actNames[a] + ' — چون Q = <b dir="ltr">' + f.q[a].toFixed(1) + '</b> بزرگ‌ترین عددِ این ردیف است<br>'
+    + '<span class="sa-tlab">چرا؟</span> ' + why + '<br>'
+    + '<span class="sa-tlab">پاداش (Reward)</span> ' + teachReward(f.reward)
+    + (f.gust ? '<br><span class="sa-tlab">تلاطم 🌪</span> محیط تصادفی است (stochastic) — عامل باید در برابر پارازیت هم پایدار بماند' : ''));
+}
 function renderWatchFrame(f) {
   placeSuit(f.tilt); placeFlame(f.tilt, f.action);
   qBars(f.q, f.action); hint(f.action);
   $('m1-action').innerHTML = '🧠 فرمان جارویس: <b>' + D.p1.actNames[f.action] + '</b>'
     + (f.gust ? '   <span class="warn">🌪 تلاطم در راه است…</span>' : '')
     + '<div class="edu-mini" style="margin-top:4px">🧑‍🏫 ' + eduComment(f) + '</div>';
+  m1TeachWatch(f);
 }
 function m1WatchReset() {
   M1.mode = 'watch'; M1.idx = 0; M1.total = 0; M1.paused = true;
+  $('m1-teach-lines').innerHTML = '';
   $('m1-step').textContent = '0/' + D.p1.frames.length;
   $('m1-play').textContent = '▶ PLAY';
   renderWatchFrame(D.p1.frames[0]); m1Hud();
@@ -609,6 +673,7 @@ function suggest() {
 function m1ManualReset() {
   M1.mode = 'manual'; M1.mTilt = -3; M1.mScore = 0; M1.mSteps = 0; M1.mStreak = 0; M1.mBusy = false;
   placeSuit(-3); placeFlame(-3, null); m1Hud();
+  $('m1-teach-lines').innerHTML = '';
   $('m1-step').textContent = '0/30';
   $('m1-action').textContent = '🎮 فرمان با توست — زره را روی 🎯 نگه دار!';
   suggest();
@@ -630,6 +695,25 @@ function m1Step(a) {
   $('m1-action').innerHTML = '🎮 شما: <b>' + ACT[a] + '</b> → پاداش <b class="' + (r > 0 ? 'good' : 'bad') + '">' + fmt(r) + '</b>';
   $('m1-step').textContent = M1.mSteps + '/30';
   m1Hud();
+  if (TEACH.on) {                          // show what the agent would have LEARNED
+    const s0 = M1.mTilt;
+    const old = D.p1.Q[s0 + 4][a];
+    const bn = crashed ? 0 : Math.max.apply(null, D.p1.Q[nt + 4]);
+    const target = r + (crashed ? 0 : 0.95 * bn);
+    const nw = old + 0.1 * (target - old);
+    const outcome = crashed
+      ? '<span class="bad">مجازات (punishment):</span> این تجربه این مسیر را در جدول کم‌ارزش‌تر می‌کند'
+      : (r === 20 ? '<span class="good">این +20 به عقبِ مسیر هم «نشت» می‌کند</span> (γ) — همان چیزی که مسیرها را ساخت'
+                  : 'جمعِ همین −۲ها، ماندنِ دور از مرکز را بی‌ارزش می‌کند');
+    teachLine('m1-teach-lines',
+      '<span class="sa-tlab">تو (عامل)</span> ' + ACT[a] + ' از شیب <b dir="ltr">' + s0 + '</b> → <b dir="ltr">' + nt + '</b><br>'
+      + '<span class="sa-tlab">پاداش (Reward)</span> ' + teachReward(r) + '<br>'
+      + '<span class="sa-tlab">اگر عامل بودی</span> به‌روزرسانی بلمن: Q(<b dir="ltr">' + s0 + ',' + ['▶', '•', '◀'][a] + '</b>) '
+      + '<span dir="ltr">' + old.toFixed(1) + ' → ' + nw.toFixed(2) + '</span>'
+      + (crashed ? ' <span class="dim">(آینده‌ای نیست — هدف فقط پاداش)</span>'
+                 : ' <span class="dim" dir="ltr">(هدف = ' + r + ' + 0.95×' + bn.toFixed(1) + ')</span>')
+      + '<br><span class="sa-tlab">معنایش</span> ' + outcome);
+  }
   setTimeout(() => {
     placeFlame(M1.mTilt, null);
     if (crashed) {
@@ -710,6 +794,7 @@ function placeAgent(i, r, c) {
 function p2Reset() {
   P2.ri = 0; P2.k = 0; P2.team = 0; P2.coll = 0; P2.docked = [null, null, null];
   $('m2-log').innerHTML = '';
+  $('m2-teach-lines').innerHTML = '';
   $('m2-round').textContent = '0'; $('m2-docked').textContent = '0/3';
   $('m2-coll').textContent = '0'; $('m2-team').textContent = '+0';
   D.p2.starts.forEach((s, i) => placeAgent(i, s[0], s[1]));
@@ -734,11 +819,25 @@ function p2Apply(mv, rnd) {
     const a = $('m2-arena');
     a.classList.add('flash'); setTimeout(() => a.classList.remove('flash'), 360);
   }
+  if (TEACH.on) {
+    let rw;
+    if (mv.landed) rw = '<span class="good">+50 ⚡ فرود موفق</span> — چون γ=0.95، ارزشِ این جایزه به خانه‌های قبلیِ مسیر هم «نشت کرده»؛ همان چیزی که مسیرِ منظم ساخت';
+    else if (mv.collision) rw = '<span class="bad">-80 💥 برخورد تیمی برای «هر دو» زره</span> — بدون هیچ رئسی، دردِ مشترک است که هماهنگی می‌سازد';
+    else if (mv.reward <= -51) rw = '<span class="bad">' + fmt(mv.reward) + ' 🔥 آتش</span> — مجازات محیط؛ بعد از چند بار، Q این مسیر قرمز شد';
+    else rw = '<span class="bad">' + fmt(mv.reward) + ' ⛽ سوخت</span> — فشار برای کوتاه‌ترین مسیر';
+    teachLine('m2-teach-lines',
+      '<span class="sa-tlab" style="color:' + s.color + '">تصمیم ' + s.icon + '</span> از <b dir="ltr">(' + mv.frm[0] + ',' + mv.frm[1] + ')</b> — بزرگ‌ترین Q = <b dir="ltr">' + mv.q + '</b> → ' + D.p2.actNames[mv.action] + '<br>'
+      + '<span class="sa-tlab">پاداش تیمی</span> ' + rw);
+  }
 }
 function p2Advance() {
   if (P2.ri >= D.p2.rounds.length) return true;
   const rd = D.p2.rounds[P2.ri];
-  if (P2.k === 0) $('m2-round').textContent = rd.n;
+  if (P2.k === 0) {
+    $('m2-round').textContent = rd.n;
+    if (TEACH.on) teachLine('m2-teach-lines',
+      '<span class="sa-tlab">⏱ راند ' + rd.n + '</span> نوبت‌ها همیشه ثابت‌اند: Mark42 → Centurion → Hulkbuster — همین ترتیبِ ثابت است که اجازه می‌دهد برخورد «ورود به خانه‌ی اشغال‌شده» دیده شود');
+  }
   if (P2.k < rd.moves.length) { p2Apply(rd.moves[P2.k], rd.n); P2.k++; }
   if (P2.k >= rd.moves.length) { P2.k = 0; P2.ri++; return false; }
   return false;
@@ -772,6 +871,8 @@ $('m2-speed').addEventListener('click', () => {
   $('m2-speed').textContent = P2.speed + '×';
 });
 $('m2-restart').addEventListener('click', () => { p2Reset(); P2.paused = false; $('m2-play').textContent = '⏸ PAUSE'; });
+$('m1-teach-toggle').addEventListener('click', () => teachSet(!TEACH.on));
+$('m2-teach-toggle').addEventListener('click', () => teachSet(!TEACH.on));
 
 /* =================  ACADEMY (teaching slides)  ================= */
 const EDU = {
@@ -1113,6 +1214,7 @@ const BOOT = [
 })();
 
 /* ---------- init ---------- */
+teachSet(TEACH.on);
 m1ManualReset(); m1WatchReset(); p2Reset(); eduGo(0);
 m1Tick(); p2Tick();
 show('scr-boot');

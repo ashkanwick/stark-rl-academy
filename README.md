@@ -12,6 +12,10 @@ and a playable browser game. No ML frameworks, no GPU, runs in ~3 seconds.
 
 ## ⚡ Quick start
 
+> 🚀 **Just want to *get it*?** Open **`learn.html`** in any browser — an interactive
+> "RL in 5 minutes" page (no Python, no setup): click through the loop, watch the
+> Q-table train itself, and see the Bellman update with real recorded numbers.
+
 ```bash
 pip install numpy matplotlib
 python stark_rl_simple.py       # 1) the whole algorithm in ~150 lines — read & run this first
@@ -26,15 +30,18 @@ Or start directly from the interactive teaching notebook:
 
 ## 🧭 Your learning path
 
-1. **[EXPLAINER.md](EXPLAINER.md)** — the 10-minute mental model: the story, the loop,
-   the one formula, the ε trick, the multi-agent magic. *Start here.*
-2. **`stark_rl_simple.py`** — the entire Q-learning algorithm in ~150 readable lines.
-3. **`stark_rl_academy.ipynb`** — step-by-step chapters with real numbers:
+1. **`learn.html`** — open in a browser: the loop, the brain, the formula — interactive, Persian, 5 minutes.
+2. **[EXPLAINER.md](EXPLAINER.md)** — the 10-minute mental model: the story, the loop,
+   the one formula, the ε trick, the multi-agent magic.
+3. **`stark_rl_simple.py`** — the entire Q-learning algorithm in ~150 readable lines.
+4. **`stark_rl_academy.ipynb`** — step-by-step chapters with real numbers:
    try the environment by hand → Bellman update by hand → watch the Q-table learn (live).
-4. **`stark_rl_game.html`** — play with the trained brains; the in-game **🎓 ACADEMY**
+5. **`stark_rl_game.html`** — play with the trained brains; the in-game **🎓 ACADEMY**
    tab teaches the same lessons interactively (click-through slides + sandbox).
-5. **`stark_rl_seminar.py`** — the full seminar script (live HUD animations, multi-agent
+6. **`stark_rl_seminar.py`** — the full seminar script (live HUD animations, multi-agent
    radar, matplotlib dashboard) for presenting on stage.
+7. **[SEMINAR_SCRIPT.md](SEMINAR_SCRIPT.md)** — presenting this at a seminar? A minute-by-minute
+   talk script: what to say, what to show, and rescue plans if anything breaks.
 
 ---
 
@@ -78,7 +85,9 @@ animations and the game comes from `argmax(Q)` of the *actually trained* tables.
 
 | file | what it is |
 |---|---|
+| `learn.html` | ⚡ interactive "RL in 5 minutes" — open in any browser, no setup |
 | `EXPLAINER.md` | 🧠 plain-language introduction — read first |
+| `SEMINAR_SCRIPT.md` | 🎤 minute-by-minute talk script for presenting the seminar |
 | `stark_rl_simple.py` | the whole algorithm in ~150 lines (single-agent only) |
 | `stark_rl_seminar.py` | full seminar: 2 environments, training, terminal/HUD animations, dashboard |
 | `stark_rl_academy.ipynb` | 🎓 teaching notebook — chapters, live Q-formation & policy-arrow animations |
@@ -111,7 +120,9 @@ Deep links for slides: `stark_rl_game.html?m=edu`, `?m=1&speed=4`, `?m=2`.
 
 پروژه‌ی سمینار «یادگیری تقویتی» با تم آیرون‌من — کاملاً آموزشی:
 
-- **شروع:** [EXPLAINER.md](EXPLAINER.md) را بخوانید، بعد `python stark_rl_simple.py` را اجرا کنید.
+- **شروع سریع:** `learn.html` را در مرورگر باز کنید — یادگیری تقویتی در ۵ دقیقه، تعاملی و بدون نصب.
+- **قدم بعد:** [EXPLAINER.md](EXPLAINER.md) را بخوانید، بعد `python stark_rl_simple.py` را اجرا کنید.
+- **ارائه دارید؟** [SEMINAR_SCRIPT.md](SEMINAR_SCRIPT.md) متن دقیقه‌به‌دقیقه‌ی سخنرانی است.
 - **نوت‌بوک آموزشی:** `stark_rl_academy.ipynb` — هر مفهوم در یک سلول جدا، با انیمیشن شکل‌گیری جدول Q.
 - **بازی:** `stark_rl_game.html` را باز کنید — تب **🎓 ACADEMY** همان درس‌ها را تعاملی یاد می‌دهد؛
   در M1 خودتان خلبان شوید و با جارویس مقایسه کنید.

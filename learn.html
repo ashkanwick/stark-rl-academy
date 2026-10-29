@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="fa">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>یادگیری تقویتی در ۵ دقیقه — Stark RL Academy</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --background: light-dark(#f6f6f4, #14161a);
+  --foreground: light-dark(#1c1e21, #e8eaed);
+  --card: light-dark(#ffffff, #1d2026);
+  --muted: light-dark(#f0f0ee, #262a31);
+  --muted-foreground: light-dark(#6b7078, #9aa1ab);
+  --primary: light-dark(#2563eb, #4f8df7);
+  --yellow: light-dark(#d9a406, #f0b429);
+  --green: light-dark(#16803c, #3ddc84);
+  --red: light-dark(#c93a3a, #ff6b6b);
+  --blue: light-dark(#2563eb, #4f8df7);
+  --border: light-dark(#e2e2de, #2c313a);
+}
+* { box-sizing: border-box }
+body { margin: 0; padding: 28px 14px; background: var(--background); color: var(--foreground);
+  font-family: Vazirmatn, Tahoma, "Segoe UI", sans-serif; font-size: 14px; line-height: 1.6 }
+h3 { font-size: 18px; font-weight: 500; margin: 0 }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; max-width: 760px; margin-inline: auto }
+.btn { appearance: none; border: 1px solid var(--border); background: var(--card); color: var(--foreground);
+  border-radius: 8px; padding: 6px 14px; font: inherit; font-size: 13px; cursor: pointer }
+.btn:hover { border-color: var(--primary) }
+.btn-primary { background: var(--primary); color: #fff; border-color: transparent }
+.btn-primary:hover { filter: brightness(1.08) }
+.text-small { font-size: 12px }
+.text-muted { color: var(--muted-foreground) }
+.tabular-nums { font-variant-numeric: tabular-nums }
+.num { font-family: Consolas, Monaco, monospace }
+.viz-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+b { font-weight: 500 }
+</style>
+</head>
+<body>
+<div id="rl-5min" dir="rtl" lang="fa" style="font-family:Tahoma,'Segoe UI',sans-serif">
+  <h3 style="margin-bottom:2px">یادگیری تقویتی در ۵ دقیقه — با زره‌ی آیرون‌من 🦾</h3>
+  <div class="text-muted text-small" style="margin-bottom:10px">Reinforcement Learning in 5 minutes — سه صفحه، سه ایده. فقط دکمه‌ها را بزن.</div>
+
+  <!-- ============ 1) THE LOOP ============ -->
+  <div class="card" style="padding:12px 14px;margin-bottom:12px">
+    <div style="font-weight:500;margin-bottom:6px">۱ · حلقه — هر گام دقیقاً چه اتفاقی می‌افتد؟ <span class="text-muted text-small">the loop</span></div>
+    <div id="lp-corridor" style="position:relative;height:52px;margin:8px 0 2px"></div>
+    <div id="lp-bars" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0 4px"></div>
+    <div class="viz-row" style="margin-top:8px">
+      <button id="lp-step" class="btn btn-primary" type="button">یک گام ▶</button>
+      <button id="lp-auto" class="btn" type="button">پخش خودکار</button>
+      <span id="lp-score" class="text-muted text-small" style="margin-inline-start:auto">امتیاز: <b class="num">0</b></span>
+    </div>
+    <div id="lp-caption" aria-live="polite" style="min-height:40px;margin-top:8px;line-height:1.9"></div>
+  </div>
+
+  <!-- ============ 2) THE BRAIN ============ -->
+  <div class="card" style="padding:12px 14px;margin-bottom:12px">
+    <div style="font-weight:500;margin-bottom:6px">۲ · مغز — جدول Q چطور خودش را پر می‌کند؟ <span class="text-muted text-small">the brain</span></div>
+    <div id="br-grid" style="display:grid;grid-template-columns:52px repeat(3,1fr);gap:4px;margin:8px 0;direction:ltr"></div>
+    <div class="text-muted text-small" style="margin-bottom:8px">آبی = تجربه‌ی خوب · قرمز = تجربه‌ی بد (سقوط!) · حلقه‌ی طلایی = بهترین حرکت هر ردیف</div>
+    <div class="viz-row">
+      <button id="br-1" class="btn" type="button">۱ اپیزود تمرین</button>
+      <button id="br-100" class="btn" type="button">۱۰۰ اپیزود</button>
+      <button id="br-800" class="btn btn-primary" type="button">۸۰۰ اپیزود (کامل)</button>
+      <button id="br-reset" class="btn" type="button" data-tooltip="بازگشت به روز اول">از صفر ↺</button>
+    </div>
+    <div id="br-readout" class="text-small tabular-nums" style="margin-top:8px"></div>
+    <div id="br-caption" aria-live="polite" style="min-height:36px;margin-top:4px;line-height:1.9"></div>
+  </div>
+
+  <!-- ============ 3) THE FORMULA ============ -->
+  <div class="card" style="padding:12px 14px">
+    <div style="font-weight:500;margin-bottom:6px">۳ · فرمول — تنها معادله‌ای که لازم است <span class="text-muted text-small">Bellman update</span></div>
+    <div dir="ltr" class="tabular-nums" style="font-size:15px;text-align:center;margin:10px 0;letter-spacing:.02em">
+      Q(s,a) ← <span id="f-old"></span> + <span id="f-alpha"></span> × ( <span id="f-r"></span> + γ × <span id="f-max"></span> − <span id="f-old2"></span> )
+    </div>
+    <div dir="ltr" class="text-small tabular-nums text-center" style="text-align:center;margin-bottom:6px">
+      = <b id="f-new"></b>
+    </div>
+    <div class="viz-row">
+      <button id="fo-next" class="btn btn-primary" type="button">قدم بعدی ▶</button>
+      <span id="fo-which" class="text-muted text-small" style="align-self:center"></span>
+    </div>
+    <div id="fo-caption" aria-live="polite" style="min-height:60px;margin-top:8px;line-height:1.9"></div>
+  </div>
+</div>
+
+<style>
+#rl-5min .lp-cell{flex:1;height:52px;display:flex;align-items:center;justify-content:center;font-size:20px;
+  background:var(--muted);border-radius:8px;position:relative}
+#rl-5min #lp-suit{position:absolute;top:50%;transform:translate(-50%,-50%);font-size:26px;
+  transition:left .32s ease;filter:drop-shadow(0 0 4px var(--primary));z-index:2}
+#rl-5min .lp-bar{background:var(--muted);border-radius:8px;padding:6px 6px 4px;text-align:center}
+#rl-5min .lp-bar .fill{height:8px;border-radius:4px;background:var(--primary);margin:4px 0;transition:width .3s}
+#rl-5min .lp-bar.chosen{outline:2px solid var(--yellow);border-radius:8px}
+#rl-5min .lp-bar.chosen .fill{background:var(--yellow)}
+#rl-5min .br-cell{border-radius:6px;padding:4px 2px;text-align:center;font-size:12px;min-height:30px;
+  display:flex;flex-direction:column;justify-content:center;position:relative}
+#rl-5min .br-best{box-shadow:inset 0 0 0 2px var(--yellow)}
+#rl-5min .br-head{color:var(--muted-foreground);font-size:11px;background:transparent;min-height:20px}
+#rl-5min .br-lab{color:var(--muted-foreground);font-size:11px;display:flex;align-items:center;justify-content:center}
+#rl-5min .pop{animation:rl5-pop .5s ease}
+@keyframes rl5-pop{0%{transform:scale(1.35)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){#rl-5min *{animation:none!important;transition:none!important}}
+</style>
+
+<script>
+(() => {
+const D = {"q": [[0.0, 0.0, 0.0], [163.6, 15.3, -100.0], [174.4, 163.4, 153.4], [185.6, 171.6, 163.6], [174.4, 174.4, 174.4], [163.6, 174.2, 185.6], [152.9, 160.7, 174.4], [-100.0, 17.9, 163.6], [0.0, 0.0, 0.0]], "steps": [{"t": 1, "s": -2, "a": 0, "s2": -1, "r": -2, "done": false, "old": 0.0, "best_next": 0.0, "target": -2.0, "new": -0.2, "alpha": 0.1, "gamma": 0.95}, {"t": 2, "s": -1, "a": 1, "s2": -2, "r": -2, "done": false, "old": 0.0, "best_next": 0.0, "target": -2.0, "new": -0.2, "alpha": 0.1, "gamma": 0.95}, {"t": 3, "s": -2, "a": 1, "s2": -1, "r": -2, "done": false, "old": 0.0, "best_next": 0.0, "target": -2.0, "new": -0.2, "alpha": 0.1, "gamma": 0.95}, {"t": 4, "s": -1, "a": 0, "s2": 0, "r": 20, "done": false, "old": 0.0, "best_next": 0.0, "target": 20.0, "new": 2.0, "alpha": 0.1, "gamma": 0.95}, {"t": 5, "s": 0, "a": 0, "s2": 1, "r": -2, "done": false, "old": 0.0, "best_next": 0.0, "target": -2.0, "new": -0.2, "alpha": 0.1, "gamma": 0.95}, {"t": 6, "s": 1, "a": 1, "s2": 2, "r": -2, "done": false, "old": 0.0, "best_next": 0.0, "target": -2.0, "new": -0.2, "alpha": 0.1, "gamma": 0.95}, {"t": 7, "s": 2, "a": 1, "s2": 1, "r": -2, "done": false, "old": 0.0, "best_next": 0.0, "target": -2.0, "new": -0.2, "alpha": 0.1, "gamma": 0.95}, {"t": 8, "s": 1, "a": 0, "s2": 2, "r": -2, "done": false, "old": 0.0, "best_next": 0.0, "target": -2.0, "new": -0.2, "alpha": 0.1, "gamma": 0.95}, {"t": 9, "s": 2, "a": 0, "s2": 3, "r": -2, "done": false, "old": 0.0, "best_next": 0.0, "target": -2.0, "new": -0.2, "alpha": 0.1, "gamma": 0.95}, {"t": 10, "s": 3, "a": 1, "s2": 4, "r": -100, "done": true, "old": 0.0, "best_next": 0.0, "target": -100.0, "new": -10.0, "alpha": 0.1, "gamma": 0.95}, {"t": 11, "s": -2, "a": 2, "s2": -3, "r": -2, "done": false, "old": 0.0, "best_next": 0.0, "target": -2.0, "new": -0.2, "alpha": 0.1, "gamma": 0.95}, {"t": 12, "s": -3, "a": 0, "s2": -2, "r": -2, "done": false, "old": 0.0, "best_next": -0.2, "target": -2.19, "new": -0.22, "alpha": 0.1, "gamma": 0.95}]};
+
+const $ = id => document.getElementById('rl-5min').querySelector('#' + id);
+const num = (v, d = 1) => { const s = (v > 0 ? '+' : '') + v.toFixed(d); return '<span dir="ltr">' + s + '</span>'; };
+const argmax3 = r => r[0] >= r[1] && r[0] >= r[2] ? 0 : (r[1] >= r[2] ? 1 : 2);
+const ACT = ['هل به راست ▶', 'هیچ‌کاری نکن ✋', 'هل به چپ ◀'];
+
+// theme colors → rgba (theme-aware fills for the heatmap)
+const root = document.getElementById('rl-5min');
+function cssRGB(v) {
+  const t = document.createElement('i'); t.style.color = v; root.appendChild(t);
+  const m = getComputedStyle(t).color.match(/\d+/g); t.remove();
+  return m ? (+m[0]) + ',' + (+m[1]) + ',' + (+m[2]) : '128,128,128';
+}
+const RGB = { blue: cssRGB('var(--blue)'), red: cssRGB('var(--red)'), yellow: cssRGB('var(--yellow)'), fg: cssRGB('var(--foreground)') };
+
+/* ================= 1 · THE LOOP ================= */
+const LP = { tilt: -3, score: 0, auto: null, busy: false };
+const names = { '-4': '💥', '0': '🎯' };
+(() => {
+  const cor = $('lp-corridor');
+  cor.style.display = 'flex'; cor.style.gap = '6px';
+  for (let i = 0; i < 9; i++) {
+    const c = document.createElement('div'); c.className = 'lp-cell';
+    c.textContent = (i === 0 || i === 8) ? '💥' : (i === 4 ? '🎯' : '·');
+    cor.appendChild(c);
+  }
+  const s = document.createElement('div'); s.id = 'lp-suit'; s.textContent = '🦾';
+  cor.appendChild(s);
+  const bars = $('lp-bars');
+  for (let a = 0; a < 3; a++) {
+    const b = document.createElement('div'); b.className = 'lp-bar'; b.id = 'lp-bar' + a;
+    b.innerHTML = '<div class="text-small">' + ACT[a] + '</div><div class="fill"></div><div class="text-small num" id="lp-qv' + a + '"></div>';
+    bars.appendChild(b);
+  }
+})();
+function lpPlace(anim) {
+  [...$('lp-corridor').children].forEach(c => {
+    if (c.id === 'lp-suit') return;
+    c.textContent = (c === $('lp-corridor').children[0] || c === $('lp-corridor').children[8]) ? '💥' : (c === $('lp-corridor').children[4] ? '🎯' : '·');
+  });
+  $('lp-suit').style.left = ((LP.tilt + 4) * (100 / 9) + 100 / 18) + '%';
+  const row = D.q[LP.tilt + 4], mx = Math.max(...row.map(Math.abs)) || 1;
+  for (let a = 0; a < 3; a++) {
+    $('lp-qv' + a).textContent = row[a].toFixed(1);
+    $('lp-bar' + a).querySelector('.fill').style.width = (8 + Math.abs(row[a]) / mx * 92) + '%';
+    $('lp-bar' + a).classList.toggle('chosen', a === argmax3(row));
+  }
+  $('lp-score').innerHTML = 'امتیاز: <b class="num">' + LP.score + '</b>';
+}
+function lpStep() {
+  if (LP.busy) return; LP.busy = true;
+  const a = argmax3(D.q[LP.tilt + 4]);
+  const d = a === 0 ? 1 : a === 2 ? -1 : (Math.random() < .5 ? -1 : 1);
+  let nt = Math.max(-4, Math.min(4, LP.tilt + d));
+  let r = -2, msg = '';
+  if (Math.abs(nt) === 4) { r = -100; }
+  else if (nt === 0) { r = 20; }
+  if (a === 1) msg = 'جارویس هیچ‌کاری نکرد و باد 🌪 تصمیم گرفت… ';
+  msg += 'شیب <b dir="ltr">' + LP.tilt + '</b> → <b dir="ltr">' + nt + '</b> با «' + ACT[a] + '» · پاداش ';
+  if (r === 20) msg += '<b style="color:var(--green)" dir="ltr">+20</b> 🎯 تعادل!';
+  else if (r === -100) msg += '<b style="color:var(--red)" dir="ltr">-100</b> 💥 برخورد با دیوار — پایان اپیزود';
+  else msg += '<b dir="ltr">-2</b> (هزینه‌ی پرواز)';
+  LP.score += r;
+  $('lp-suit').style.left = ((nt + 4) * (100 / 9) + 100 / 18) + '%';
+  setTimeout(() => {
+    LP.tilt = Math.abs(nt) === 4 ? -3 : nt;
+    if (Math.abs(nt) === 4) { LP.score = 0; msg += ' — دوباره از شیب −۳ شروع می‌کنیم'; }
+    lpPlace();
+    $('lp-caption').innerHTML = msg;
+    LP.busy = false;
+  }, 340);
+}
+$('lp-step').addEventListener('click', lpStep);
+$('lp-auto').addEventListener('click', () => {
+  if (LP.auto) { clearInterval(LP.auto); LP.auto = null; $('lp-auto').textContent = 'پخش خودکار'; }
+  else { LP.auto = setInterval(lpStep, 950); $('lp-auto').textContent = 'توقف ⏸'; lpStep(); }
+});
+lpPlace();
+$('lp-caption').innerHTML = 'دکمه‌ی «یک گام» را بزن: جارویس هر بار فقط <b>بزرگ‌ترین عدد</b> ردیفِ جدولش را اجرا می‌کند — همین!';
+
+/* ================= 2 · THE BRAIN ================= */
+const BR = { Q: null, ep: 0, crashes: [] };
+const TOT = 800;
+function brInit() {
+  BR.Q = Array.from({ length: 9 }, () => [0, 0, 0]);
+  BR.ep = 0; BR.crashes = [];
+  brPaint('روز اول: همه‌ی خانه‌ها صفرند — جارویس <b>هیچ چیزی نمی‌داند</b>. دکمه‌های تمرین را بزن!');
+}
+(() => {
+  const g = $('br-grid');
+  const head = ['tilt', '▶', '✋', '◀'];
+  head.forEach(h => { const d = document.createElement('div'); d.className = 'br-head'; d.textContent = h; g.appendChild(d); });
+  for (let t = -4; t <= 4; t++) {
+    const lab = document.createElement('div'); lab.className = 'br-lab';
+    lab.textContent = (t > 0 ? '+' : '') + t + (Math.abs(t) === 4 ? ' 💥' : (t === 0 ? ' 🎯' : ''));
+    g.appendChild(lab);
+    for (let a = 0; a < 3; a++) {
+      const c = document.createElement('div'); c.className = 'br-cell'; c.id = 'br-c' + (t + 4) + a;
+      g.appendChild(c);
+    }
+  }
+})();
+function brPaint(caption) {
+  const mx = Math.max(1, ...BR.Q.flat().map(Math.abs));
+  for (let t = -4; t <= 4; t++) for (let a = 0; a < 3; a++) {
+    const v = BR.Q[t + 4][a], f = Math.abs(v) / mx;
+    const col = v >= 0 ? RGB.blue : RGB.red;
+    const el = $('br-c' + (t + 4) + a);
+    el.style.background = 'rgba(' + col + ',' + (f * .75).toFixed(2) + ')';
+    el.style.color = f > .55 ? '#fff' : '';
+    el.innerHTML = '<span dir="ltr">' + v.toFixed(1) + '</span>';
+    el.classList.toggle('br-best', Math.abs(t) < 4 && a === argmax3(BR.Q[t + 4]));
+  }
+  const recent = BR.crashes.slice(-100);
+  const cr = recent.length ? Math.round(100 * recent.filter(x => x).length / recent.length) : null;
+  const eps = Math.max(0.01, 1 - BR.ep / TOT);
+  $('br-readout').innerHTML = 'اپیزود: <b dir="ltr">' + BR.ep + '</b> / 800 · ε (احتمال حرکت تصادفی) = <b dir="ltr">' + eps.toFixed(2) + '</b>'
+    + (cr === null ? '' : ' · نرخ سقوط (۱۳۰ اپیزود اخیر): <b dir="ltr" style="color:' + (cr > 30 ? 'var(--red)' : 'var(--green)') + '">' + cr + '%</b>');
+  if (caption) $('br-caption').innerHTML = caption;
+}
+function brStepEnv(tilt, a) {
+  const d = a === 0 ? 1 : a === 2 ? -1 : (Math.random() < .5 ? -1 : 1);
+  const nt = Math.max(-4, Math.min(4, tilt + d));
+  if (Math.abs(nt) === 4) return { nt, r: -100, done: true };
+  if (nt === 0) return { nt, r: 20, done: false };
+  return { nt, r: -2, done: false };
+}
+function brTrain(n) {
+  for (let e = 0; e < n && BR.ep < 1500; e++) {
+    const eps = Math.max(0.01, 1 - BR.ep / TOT);
+    let tilt = Math.floor(Math.random() * 7) - 3;
+    let crashed = false;
+    for (let s = 0; s < 30; s++) {
+      const a = Math.random() < eps ? Math.floor(Math.random() * 3) : argmax3(BR.Q[tilt + 4]);
+      const { nt, r, done } = brStepEnv(tilt, a);
+      const future = done ? 0 : Math.max(...BR.Q[nt + 4]);
+      BR.Q[tilt + 4][a] += 0.1 * (r + 0.95 * future - BR.Q[tilt + 4][a]);
+      tilt = nt;
+      if (done) { crashed = true; break; }
+    }
+    BR.ep++; BR.crashes.push(crashed);
+  }
+  let cap;
+  if (BR.ep === 0) cap = 'همه‌چیز صفر — هیچ چیزی نمی‌داند.';
+  else if (BR.ep < 200) cap = 'در حال کاوش 🎲 — خانه‌های قرمز یعنی «این راه به دیوار می‌رسد!» و آبی یعنی «اینجا پاداش است».';
+  else if (BR.ep < TOT) cap = 'دقت کن: حلقه‌های طلایی دارند به سمت 🎯 منظم می‌شوند — سیاست از دل جدول بیرون می‌آید.';
+  else cap = 'تمام! در هر ردیف، بزرگ‌ترین عدد همان حرکتی است که زره را به 🎯 می‌رساند. <b>هیچ‌کس به جارویس نگفت چه‌کار کند — فقط پاداش دید.</b>';
+  brPaint(cap);
+  saveState();
+}
+$('br-1').addEventListener('click', () => brTrain(1));
+$('br-100').addEventListener('click', () => brTrain(100));
+$('br-800').addEventListener('click', () => brTrain(800 - BR.ep > 0 ? 800 - BR.ep : 1));
+$('br-reset').addEventListener('click', () => { brInit(); brPaint(); saveState(); });
+brInit(); brPaint();
+
+/* ================= 3 · THE FORMULA ================= */
+const FO = { i: 0 };
+function foShow() {
+  const st = D.steps[FO.i % D.steps.length];
+  const C = v => 'style="color:var(--' + (v < 0 ? 'red' : 'green') + ')"';
+  $('f-old').innerHTML = $('f-old2').innerHTML = '<b>' + st.old.toFixed(1) + '</b>';
+  $('f-alpha').textContent = st.alpha;
+  $('f-r').innerHTML = '<b ' + C(st.r) + '>' + st.r.toFixed(0) + '</b>';
+  $('f-max').innerHTML = '<b>' + st.best_next.toFixed(1) + '</b>';
+  $('f-new').innerHTML = '<b ' + C(st.new) + '>' + st.new.toFixed(2) + '</b>';
+  $('fo-which').innerHTML = 'قدم <b dir="ltr">' + st.t + '</b> از <b dir="ltr">' + D.steps.length + '</b> — از آموزش واقعی ضبط شده';
+  const sTxt = 'شیب <b dir="ltr">' + st.s + '</b>';
+  const aTxt = '«' + ACT[st.a] + '»';
+  let cap = sTxt + ' با ' + aTxt + ' → شیب <b dir="ltr">' + st.s2 + '</b> · پاداش <b dir="ltr">' + st.r + '</b>. ';
+  if (st.done) cap += '💥 سقوط! <b>آینده‌ای وجود ندارد</b> پس هدف فقط پاداش است: <b dir="ltr">' + st.target.toFixed(1) + '</b>. ';
+  else cap += 'هدف = پاداش + γ×بهترینِ آینده = <b dir="ltr">' + st.target.toFixed(2) + '</b>. ';
+  cap += 'باورِ قبلی <b dir="ltr">' + st.old.toFixed(1) + '</b> فقط <b>کمی</b> به سمت هدف حرکت کرد (α = 0.1): <b dir="ltr">' + st.new.toFixed(2) + '</b>.';
+  $('fo-caption').innerHTML = cap;
+}
+$('fo-next').addEventListener('click', () => { FO.i++; foShow(); saveState(); });
+foShow();
+
+/* ================= state (inline host only) ================= */
+function saveState() {
+  try { window.zcode && window.zcode.setWidgetState && window.zcode.setWidgetState({ modelContent: { ep: BR.ep, fIdx: FO.i } }); } catch (e) { /* standalone */ }
+}
+try {
+  const st = window.zcode && window.zcode.widgetState && window.zcode.widgetState.modelContent;
+  if (st && st.ep) { brTrain(st.ep); FO.i = st.fIdx || 0; foShow(); }
+} catch (e) { /* standalone */ }
+})();
+</script>
+</body>
+</html>
